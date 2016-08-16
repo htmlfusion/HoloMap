@@ -11,11 +11,13 @@ public class AnchorStoreService : Singleton<AnchorStoreService> {
     WorldAnchor worldAnchor;
 
     GameObject worldAnchorsDir;
+    GameObject scaledMapModel;
     bool storeLoaded;
 
 	void Start () {
         // get WorldAnchors directory
         worldAnchorsDir = GameObject.Find("WorldAnchors");
+        scaledMapModel = GameObject.Find("ScaledMapModel");
 
         WorldAnchorStore.GetAsync(StoreLoaded);
 	}
@@ -46,6 +48,9 @@ public class AnchorStoreService : Singleton<AnchorStoreService> {
                 go.GetComponent<Anchor>().AnchorStoreReady();
             }
         }
+
+        // notifies Mapping Manager the store is ready
+        scaledMapModel.GetComponent<MappingManager>().AnchorsReady();
     }
 
     public void SaveAnchorLocation(string anchorName, WorldAnchor anchor)
