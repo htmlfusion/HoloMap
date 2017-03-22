@@ -6,14 +6,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-#if !UNITY_EDITOR
+#if !UNITY_EDITOR && UNITY_METRO
 using System.Threading;
 using System.Threading.Tasks;
-#else
+#endif
+
+#if UNITY_EDITOR
 using UnityEditor;
 #endif
 
-namespace HoloToolkit.Unity
+namespace HoloToolkit.Unity.SpatialMapping
 {
     /// <summary>
     /// SurfaceMeshesToPlanes will find and create planes based on the meshes returned by the SpatialMappingManager's Observer.
@@ -82,7 +84,7 @@ namespace HoloToolkit.Unity
         /// </summary>
         private bool makingPlanes = false;
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || UNITY_STANDALONE
         /// <summary>
         /// How much time (in sec), while running in the Unity Editor, to allow RemoveSurfaceVertices to consume before returning control to the main program.
         /// </summary>
@@ -186,14 +188,15 @@ namespace HoloToolkit.Unity
             // Pause our work, and continue on the next frame.
             yield return null;
 
-#if !UNITY_EDITOR
+#if !UNITY_EDITOR && UNITY_METRO
             // When not in the unity editor we can use a cool background task to help manage FindPlanes().
             Task<BoundedPlane[]> planeTask = Task.Run(() => PlaneFinding.FindPlanes(meshData, snapToGravityThreshold, MinArea));
-        
+            Debug.Log("looking for planes");
             while (planeTask.IsCompleted == false)
             {
                 yield return null;
             }
+            Debug.Log("planes found");
 
             BoundedPlane[] planes = planeTask.Result;
 #else
@@ -215,6 +218,7 @@ namespace HoloToolkit.Unity
             {
                 upNormalThreshold = SurfacePlanePrefab.GetComponent<SurfacePlane>().UpNormalThreshold;
             }
+            Debug.Log("about to go into this block");
 
             // Find the floor and ceiling.
             // We classify the floor as the maximum horizontal surface below the user's head.
@@ -227,6 +231,8 @@ namespace HoloToolkit.Unity
                     maxFloorArea = Mathf.Max(maxFloorArea, boundedPlane.Area);
                     if (maxFloorArea == boundedPlane.Area)
                     {
+                        Debug.Log("updatinggggg");
+
                         FloorYPosition = boundedPlane.Bounds.Center.y;
                     }
                 }

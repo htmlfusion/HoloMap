@@ -4,6 +4,15 @@ Useful common concepts that you can leverage in your application.
 ### [Prefabs](Prefabs)
 Common useful prefabs not particularly related to a particular HoloLens feature.
 
+#### FPSDisplay.prefab
+Simple Tagalong billboard displaying application's frames per second.
+
+#### HeadsUpDirectionIndicator.prefab
+A drop in direction indicator that stays in the users view at all times.
+
+#### HeadsUpDirectionIndicatorPointer.prefab
+A quad based pointer to be used with the HeadsUpDirectionIndicator prefab to create an out of box direction indicator.k
+
 #### Main Camera.prefab
 Unity camera that has been customized for Holographic development.
 1. Camera.Transform set to 0,0,0
@@ -32,20 +41,23 @@ You must provide GameObjects for the **_Cursor_** and **_DirectionIndicatorObjec
 #### FixedAngularSize.cs
 Causes a hologram to maintain a fixed angular size, which is to say it occupies the same pixels in the view regardless of its distance from the camera.
 
+#### HeadsUpDirectionIndicator.cs
+Spawns a user specified "pointer" object and startup and alligns it to aim at a target object which keeping the pointer in view at all times.
+
 #### Interpolator.cs
 A MonoBehaviour that interpolates a transform's position, rotation or scale.
 
-#### ManualCameraControl.cs
-A script to add to the main camera object so that when running in Play mode in Unity, the user can control the camera using keyboard and mouse.
+#### SphereBasedTagalong.cs
+A simple Tagalong that stays inside a sphere at a fixed distance from the camera. Very cheap implementation with smoothing capability.
 
 #### SimpleTagalong.cs
 A Tagalong that stays at a fixed distance from the camera and always seeks to have a part of itself in the view frustum of the camera.
 
-#### Singleton.cs
-A base class to make a MonoBehaviour follow the singleton design pattern.
-
 #### Tagalong.cs
 A Tagalong that extends SimpleTagalong that allows for specifying the minimum and target percentage of the object to keep in the view frustum of the camera and that keeps the Tagalong object in front of other holograms including the Spatial Mapping Mesh.
+
+#### Singleton.cs
+A base class to make a MonoBehaviour follow the singleton design pattern.
 
 #### TextToSpeechManager.cs
 Provides dynamic Text to Speech. Speech is generated using the UWP SpeechSynthesizer and then played through a Unity AudioSource. Both plain text and SSML are supported.   
@@ -73,6 +85,9 @@ Feature configurable unlit shader.  Use when no lighting is desired.
 #### UnlitConfigurableTransparent.shader
 Feature configurable unlit transparent shader.  Use when transparency and no lighting are desired.
 
+#### UnlitNoDepthTest.shader
+Render with a single texture but ignore depth test resuls so object always appears on top.
+
 #### VertexLitConfigurable.cginc
 Code shared between VertexLitConfigurable.shader and VertexLitConfigurableTransparent.shader.
 
@@ -87,9 +102,15 @@ A simple occlusion shader that can be used to hide other objects. This prevents 
 
 ### [Tests](Tests)
 
-#### ManualCameraControl.unity
+#### HeadsUpDirectionIndicator.unity
+This scene shows 7 marker objects with 7 HeadsUpDirectionIndicators pointing to each. Each indicator has a label that matches its corresponding marker. 6 of the marker/indicator pairs are used to test the edge cases of axis aligned markers. The 7th is an arbitrary point off of the cartesean axes. From the starting position, the user should be able to follow the direction of each indicator and arrive at the marker with the corresponding axis label. At the start, the labels should be in the following screen locations.
 
-This scene shows how to use ManualCameraControl.cs.  The script is on the main camera of the scene.  When preview mode in Unity is activated, the user can move around the scene using WASD and look around using ctrl + mouse. 
+- \-X at the left
+- +X at the right
+- \-Y at the bottom
+- +Y at the top
+- \-Z also at the bottom
+- +Z in front
 
 #### TextToSpeechManager.unity 
 

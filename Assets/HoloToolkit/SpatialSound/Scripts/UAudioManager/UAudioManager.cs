@@ -53,13 +53,6 @@ namespace HoloToolkit.Unity
             base.Awake();
 
             CreateEventsDictionary();
-
-            if (events.Length > 0)
-            {
-                string key = events[0].name;
-                PlayEvent(key);
-                StopEvent(key);
-            }
         }
 
         /// <summary>
@@ -77,13 +70,15 @@ namespace HoloToolkit.Unity
         /// </summary>
         /// <param name="eventName">The name associated with the AudioEvent.</param>
         /// <param name="emitter">The GameObject on which the AudioEvent is to be played.</param>
-        public void PlayEvent(string eventName, GameObject emitter)
+        /// <param name="messageOnAudioEnd">The Message to Send to the GameObject when the sound has finished playing.</param>
+        public void PlayEvent(string eventName, GameObject emitter, string messageOnAudioEnd = null)
         {
             PlayEvent(
                 eventName,
                 emitter,
                 null,
-                null);
+                null,
+                messageOnAudioEnd);
         }
 
         /// <summary>
@@ -119,10 +114,12 @@ namespace HoloToolkit.Unity
         /// <param name="emitter">The GameObject on which the AudioEvent is to be played.</param>
         /// <param name="primarySource">The AudioSource component to use as the primary source for the event.</param>
         /// <param name="secondarySource">The AudioSource component to use as the secondary source for the event.</param>
+        /// <param name="messageOnAudioEnd">The Message to Send to the GameObject when the sound has finished playing.</param>
         private void PlayEvent(string eventName,
                             GameObject emitter,
                             AudioSource primarySource,
-                            AudioSource secondarySource)
+                            AudioSource secondarySource,
+                            string messageOnAudioEnd = null)
         {
             if (!CanPlayNewEvent())
             {
@@ -131,14 +128,15 @@ namespace HoloToolkit.Unity
             emitter = ApplyAudioEmitterTransform(emitter);
             if (emitter == null)
             {
-                return;
+                //if emitter is null, use the uaudiomanager gameobject(2dsound)
+                emitter = gameObject;
             }
 
             AudioEvent currentEvent;
 
             if (!eventsDictionary.TryGetValue(eventName, out currentEvent))
             {
-                Debug.LogErrorFormat(this, "Could not find event \"{0}\"", eventName);
+                Debug.LogFormat( "Could not find event \"{0}\"", eventName);
                 return;
             }
 
@@ -168,7 +166,7 @@ namespace HoloToolkit.Unity
                 secondarySource = GetUnusedAudioSource(emitter);
             }
 
-            PlayEvent(currentEvent, emitter, primarySource, secondarySource);
+            PlayEvent(currentEvent, emitter, primarySource, secondarySource, messageOnAudioEnd);
         }
 
         /// <summary>
@@ -178,94 +176,117 @@ namespace HoloToolkit.Unity
         /// <param name="emitter">The GameObject on which the AudioEvent is to be played.</param>
         /// <param name="primarySource">The AudioSource component to use as the primary source for the event.</param>
         /// <param name="secondarySource">The AudioSource component to use as the secondary source for the event.</param>
+        /// <param name="messageOnAudioEnd">The Message to Send to the GameObject when the sound has finished playing.</param>
         private void PlayEvent(AudioEvent audioEvent,
                             GameObject emitter,
                             AudioSource primarySource,
-                            AudioSource secondarySource)
+                            AudioSource secondarySource,
+                            string messageOnAudioEnd = null)
         {
-            ActiveEvent tempEvent = new ActiveEvent(audioEvent, emitter, primarySource, secondarySource);
+            ActiveEvent tempEvent = new ActiveEvent(audioEvent, emitter, primarySource, secondarySource, messageOnAudioEnd);
 
             // The base class owns this event once we pass it to PlayContainer, and may dispose it if it cannot be played.
             PlayContainer(tempEvent);
         }
 
         /// <summary>
-        /// Stops all events with the name matching eventName.
+        /// Stop event by gameObject.
         /// </summary>
-        /// <param name="eventName">The name associated with the AudioEvents.</param>
-        public void StopAllEvents(string eventName)
+        /// <param name="eventName"></param>
+        /// <param name="gameObjectToStop"></param>
+        /// <param name="fadeOutTime"></param>
+        public void StopEventsOnGameObject(string eventName, GameObject gameObjectToStop, float fadeOutTime = 0f)
         {
             for (int i = activeEvents.Count - 1; i >= 0; i--)
             {
-                if (activeEvents[i].audioEvent.name == eventName)
+                ActiveEvent activeEvent = activeEvents[i];
+
+                if (activeEvent.AudioEmitter == gameObjectToStop)
                 {
-                    StopEvent(activeEvents[i]);
+                    StopEvent(activeEvent.audioEvent.name, gameObjectToStop, fadeOutTime);
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Stops all events by name.
+        /// </summary>
+        /// <param name="eventName">The name associated with the AudioEvent.</param>
+        /// <param name="fadeOutTime">The amount of time in seconds to completely fade out the sound.</param>
+        public void StopAllEvents(string eventName, GameObject emitter = null, float fadeOutTime = 0f)
+        {
+
+            for (int i = activeEvents.Count - 1; i >= 0; i--)
+            {
+                ActiveEvent activeEvent = activeEvents[i];
+
+                if (activeEvent.audioEvent.name == eventName)
+                {
+                    if (fadeOutTime > 0)
+                    {
+                        StartCoroutine(StopEventWithFadeCoroutine(activeEvent, fadeOutTime));
+                    }
+                    else
+                    {
+                        StartCoroutine(StopEventWithFadeCoroutine(activeEvent, activeEvent.audioEvent.fadeOutTime));
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// Stops an AudioEvent.
+        /// Stops all.
         /// </summary>
-        /// <param name="eventName">The name associated with the AudioEvent.</param>
-        public void StopEvent(string eventName)
+        /// <param name="fadeOutTime">The amount of time in seconds to completely fade out the sound.</param>
+        public void StopAll(GameObject emitter = null, float fadeOutTime = 0f)
         {
-            StopEvent(eventName, gameObject);
+            foreach (ActiveEvent activeEvent in activeEvents)
+            {
+                if (fadeOutTime > 0)
+                {
+                    StartCoroutine(StopEventWithFadeCoroutine(activeEvent, fadeOutTime));
+                }
+                else
+                {
+                    StartCoroutine(StopEventWithFadeCoroutine(activeEvent, activeEvent.audioEvent.fadeOutTime));
+                }
+            }
         }
 
-        /// <summary>
-        /// Stops an AudioEvent.
-        /// </summary>
-        /// <param name="eventName">The name associated with the AudioEvent.</param>
-        /// <param name="fadeTime">The amount of time in seconds to completely fade out the sound.</param>
-        public void StopEvent(string eventName, float fadeTime)
-        {
-            StopEvent(eventName, gameObject, fadeTime);
-        }
+
 
         /// <summary>
         /// Stops an AudioEvent.
         /// </summary>
         /// <param name="eventName">The name associated with the AudioEvent.</param>
         /// <param name="emitter">The GameObject on which the AudioEvent will stopped.</param>
-        public void StopEvent(string eventName, GameObject emitter)
-        {
-            emitter = ApplyAudioEmitterTransform(emitter);
-            if (emitter == null)
-            {
-                return;
-            }
-
-            for (int i = activeEvents.Count - 1; i >= 0; i--)
-            {
-                if (activeEvents[i].audioEvent.name == eventName && activeEvents[i].AudioEmitter == emitter)
-                {
-                    StopEvent(activeEvents[i]);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Stops an AudioEvent.
-        /// </summary>
-        /// <param name="eventName">The name associated with the AudioEvent.</param>
-        /// <param name="emitter">The GameObject on which the AudioEvent will stopped.</param>
         /// <param name="fadeTime">The amount of time in seconds to completely fade out the sound.</param>
-        public void StopEvent(string eventName, GameObject emitter, float fadeTime)
+        public void StopEvent(string eventName, GameObject emitter = null, float fadeOutTime = 0f)
         {
             emitter = ApplyAudioEmitterTransform(emitter);
             if (emitter == null)
             {
-                return;
+                //if emitter is null, use the uaudiomanager gameobject(2dsound)
+                emitter = gameObject;
             }
 
             for (int i = activeEvents.Count - 1; i >= 0; i--)
             {
                 ActiveEvent activeEvent = activeEvents[i];
-                if (activeEvent.audioEvent.name == eventName &&
-                    activeEvent.AudioEmitter == emitter)
+
+                if (activeEvent.audioEvent.name == eventName && activeEvent.AudioEmitter == emitter)
                 {
-                    StartCoroutine(StopEventWithFadeCoroutine(activeEvent, fadeTime));
+                    //if there's no fade specified, use the fade stored in the event
+                    if (fadeOutTime > 0f)
+                    {
+                        StartCoroutine(StopEventWithFadeCoroutine(activeEvent, fadeOutTime));
+                    }
+                    else
+                    {
+                        StartCoroutine(StopEventWithFadeCoroutine(activeEvent, activeEvents[i].audioEvent.fadeOutTime));
+
+                    }
                 }
             }
         }
